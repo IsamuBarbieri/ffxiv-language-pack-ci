@@ -8,6 +8,11 @@ on:
         description: "The [target.*] suffix: es-es, it, pt-br, pl."
         required: false
         type: string
+      rules:
+        description: "Comma-separated rules for manual runs. Empty uses the CI rule list."
+        required: false
+        type: string
+        default: ""
     secrets:
       CI_READ_TOKEN:
         required: false
@@ -32,7 +37,7 @@ jobs:
       # Actions pinned by commit: a tag can be moved, a commit cannot.
       # The pull request is checked out as data. Nothing in it is executed: the script comes from
       # this repository.
-      - name: "Checkout the pull request"
+      - name: "Checkout the language pack"
         uses: "actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09" # v5
         with:
           ref: "${{ github.event.pull_request.head.sha || github.sha }}"
@@ -47,6 +52,7 @@ jobs:
           persist-credentials: false
 
       - name: "Check path restrictions"
+        if: github.event_name == 'pull_request'
         shell: "bash"
         env:
           BASE_SHA: "${{ github.event.pull_request.base.sha }}"
@@ -140,6 +146,7 @@ jobs:
           dotnet-version: "10.0.402"
 
       - name: "Validate ULD layouts"
+        if: github.event_name == 'pull_request'
         uses: ./.ci/actions/validate-layouts
         with:
           language: ${{ env.LANGUAGE }}
@@ -148,7 +155,8 @@ jobs:
       - name: "Validate content"
         id: content-validation
         env:
-          BASE_SHA: "${{ github.event.pull_request.base.sha }}"
+          BASE_REF: "${{ github.event.pull_request.base.sha || format('refs/remotes/origin/{0}', github.event.repository.default_branch) }}"
+          REQUESTED_RULES: "${{ github.event_name == 'workflow_dispatch' && inputs.rules || '' }}"
           VALIDATOR_RULES: >-
             lp-structure-json,
             lp-structure-file-identity,
@@ -169,12 +177,16 @@ jobs:
             lp-textures-banners-variants,
             lp-textures-banners-dimensions
         run: |
+          rules="$VALIDATOR_RULES"
+          if [[ -n "${REQUESTED_RULES//[[:space:]]/}" ]]; then
+            rules="$REQUESTED_RULES"
+          fi
           report="validate-report-$(date -u +'%Y-%m-%d_%H-%M-%SZ')"
           printf 'report-name=%s\n' "$report" >> "$GITHUB_OUTPUT"
           baseline="$RUNNER_TEMP/corpus-baseline"
           archive="$RUNNER_TEMP/corpus-baseline.tar"
           mkdir -p "$baseline"
-          git archive --format=tar --output="$archive" "$BASE_SHA"
+          git archive --format=tar --output="$archive" "$BASE_REF"
           tar -xf "$archive" -C "$baseline"
           config="$RUNNER_TEMP/validator.ini"
           {
@@ -188,7 +200,7 @@ jobs:
           } > "$config"
           FF14_TOOLS_CONFIG="$config" dotnet run --project .tools/CorpusValidator -c Release -- \
             --lp "$GITHUB_WORKSPACE" \
-            --rules "$VALIDATOR_RULES" \
+            --rules "$rules" \
             --baseline "$baseline" \
             --json "$report.json" \
             --markdown validate-report.md
