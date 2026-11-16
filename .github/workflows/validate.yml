@@ -163,6 +163,8 @@ jobs:
             lp-macros-syntax,
             lp-macros-speaker-label,
             lp-macros-icons,
+            lp-terminology-drift-fates,
+            lp-terminology-drift-placenames,
             lp-textures-banners-format,
             lp-textures-banners-variants,
             lp-textures-banners-dimensions
