@@ -4,7 +4,7 @@ Shared Linux workflows for FFXIV language packs.
 
 | Workflow | Use |
 |---|---|
-| `validate.yml` | Checks changed paths, corpus structure, content and optional ULD layouts on pull requests. |
+| `validate.yml` | Validates LP data on pull requests and manual runs. Checks changed paths and optional ULD layouts on pull requests. |
 | `release.yml` | Checks source sync, builds and publishes the pack, then commits coverage. |
 | `sync.yml` | Syncs each pack and keeps its PR in draft until the full pack builds. |
 | `check.yml` | Runs actionlint and checks the shared Dalamud setup. |
@@ -24,6 +24,14 @@ The explicit rule list in `validate.yml` checks LP structure, source alignment, 
 review files, macro syntax, speaker labels, icons, FATE name references, place names and banner textures.
 Other linguistic and heuristic rules are not selected.
 Tools is read from `main` and must support the selected rule names and parameters.
+
+For manual validation, add `workflow_dispatch` to the pack's validation workflow and pass its optional
+`rules` string input to this workflow. Select the LP branch with **Use workflow from** in GitHub Actions.
+Use comma-separated rule names, such as `lp-terminology-drift-fates,lp-terminology-drift-placenames`.
+An empty value uses the CI rule list. Pull requests always use the CI rule list.
+Manual runs validate the full selected branch. Baseline checks compare it with the repository's default branch.
+Path restrictions, ULD layout validation and PR comments run only for pull requests. Validation does not modify LP files.
+
 Banner variants and dimensions use `metadata/banner-textures.json` and `ffxivgame.ver` from game-sheets.
 The workflow sets `sheets` under `[common]` in its generated `tools.ini`. No installed game is required.
 Changed data files must be regular and non-executable. Workflow changes require code owner approval.
