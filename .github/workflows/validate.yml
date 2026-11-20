@@ -71,7 +71,11 @@ jobs:
             kind=${status:0:1}
             if [[ $kind = R || $kind = C ]]; then
               IFS= read -r -d '' destination
-              if [[ $kind = R && (
+              # Git can pair unrelated sparse TEX blobs as renames; validate the new texture normally.
+              if [[ $kind = R && $path = ui/icon/*/en/*.tex && $destination = ui/icon/*/en/*.tex ]]; then
+                path=$destination
+                kind=A
+              elif [[ $kind = R && (
                 ( $path = glossary/excluded-rows.json && $destination = inventory-exclusions.json ) ||
                 ( $path = glossary/bnpc-override.json && $destination = glossary/bnpc-canonical-names.json ) ||
                 ( $path = glossary/enpc-override.json && $destination = glossary/enpc-canonical-names.json )
